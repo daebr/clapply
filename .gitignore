@@ -1,0 +1,4 @@
+.stack-work/
+clapply.cabal
+*~
+*.lock
