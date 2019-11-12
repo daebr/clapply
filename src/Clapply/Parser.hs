@@ -1,47 +1,102 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE LambdaCase, TypeSynonymInstances #-}
 
 module Clapply.Parser 
-    ( parse
+    ( Parser
+    , ParseResult
+    , Input
+    , Error
+    , parse
+    , run
     , eval
     , exec
     , pend
     , pchar
+    , pdigit
     , many
+    , many1
+    , (<||>)
+    , (.&&.)
+    , (<?>)
     ) where
 
 import qualified Data.List.NonEmpty as NE
-import Control.Monad.State.Lazy (State, state, runState, evalState, execState)
+import Control.Applicative ((<|>)) 
+import Control.Monad.State.Lazy (StateT(..), runStateT)
 
-type ParseResult a = Either String a
+type Input = String
+type Error = String
+type ParseResult = Either Error
 
-type Parser a = State String (ParseResult a)
+type Parser = StateT Input ParseResult
 
-parse :: Parser a -> String -> (Either String a, String)
-parse = runState
+run :: Parser a -> Input -> ParseResult (a, Input) 
+run = runStateT
 
-eval :: Parser a -> String -> Either String a
-eval = evalState
+eval :: Parser a -> Input -> ParseResult a
+eval p = fmap fst . run p
 
-exec :: Parser a -> String -> String
-exec = execState
+exec :: Parser a -> Input -> ParseResult Input
+exec p = fmap snd . run p
+
+parse :: Parser a -> Input -> ParseResult a
+parse = eval
+
+liftP :: (Input -> ParseResult (a, Input)) -> Parser a
+liftP = StateT
 
 satisfy :: (Char -> Bool) -> Parser Char
-satisfy p = state run
+satisfy p = liftP state
   where
-    run = \case
-        []                 -> (Left "satisfy input empty", [])
-        (x:xs) | p x       -> (Right x, xs)
-               | otherwise -> (Left "satisfy failed", xs)
+    state = \case
+        []                 -> Left "no input"
+        (x:xs) | p x       -> Right (x, xs)
+               | otherwise -> Left "satisfy failed"
+
+infixl 3 <||>
+(<||>) :: Parser a -> Parser a -> Parser a
+(<||>) = (<|>)
+
+andThen :: Parser a -> Parser b -> Parser (a,b)
+andThen p1 p2 =
+    p1 >>= (\a ->
+    p2 >>= (\b ->
+        pure (a,b)))
+
+infix 3 .&&.
+(.&&.) :: Parser a -> Parser b -> Parser (a,b)
+(.&&.) = andThen
+
+mapError :: (Error -> Error) -> Parser a -> Parser a
+mapError f p = liftP state
+  where
+    state s = case run p s of
+        Right (a,s') -> Right (a,s')
+        Left e       -> Left (f e)
+
+infixl 7 <?>
+(<?>) :: Parser a -> (Error -> Error) -> Parser a
+(<?>) = flip mapError
 
 many :: Parser a -> Parser [a]
-many = error "???"
+many p = ((:) <$> p <*> many p) <|> pure []
+
+many1 :: Parser a -> Parser [a]
+many1 p = (:) <$> p <*> many p
 
 pend :: Parser ()
-pend = state run
+pend = liftP run
   where
     run = \case
-        "" -> (Right (), "")
-        s  -> (Left "pend failed", s) 
+        "" -> Right ((), "")
+        s  -> Left "pend failed"
 
 pchar :: Char -> Parser Char
 pchar c = satisfy (== c)
+
+pdigit :: Parser Char
+pdigit = reduce (<|>) $ pchar <$> ['0'..'9']
+
+reduce :: (Parser a -> Parser a -> Parser a) -> [Parser a] -> Parser a
+reduce _ []     = fail "cannot reduce on empty list"
+reduce _ [x]    = x
+reduce f (x:xs) = f x (reduce f xs)
