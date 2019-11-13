@@ -12,6 +12,8 @@ module Clapply.Parser
     , pend
     , pchar
     , pdigit
+    , pstring
+    , anyOf
     , many
     , many1
     , (<||>)
@@ -44,6 +46,9 @@ parse = eval
 liftP :: (Input -> ParseResult (a, Input)) -> Parser a
 liftP = StateT
 
+failP :: Error -> Parser a
+failP err = liftP (const $ Left err)
+
 satisfy :: (Char -> Bool) -> Parser Char
 satisfy p = liftP state
   where
@@ -55,6 +60,10 @@ satisfy p = liftP state
 infixl 3 <||>
 (<||>) :: Parser a -> Parser a -> Parser a
 (<||>) = (<|>)
+
+anyOf :: [Parser a] -> Parser a
+anyOf [] = failP "anyOf empty"
+anyOf xs = reduce (<|>) xs
 
 andThen :: Parser a -> Parser b -> Parser (a,b)
 andThen p1 p2 =
@@ -94,7 +103,10 @@ pchar :: Char -> Parser Char
 pchar c = satisfy (== c)
 
 pdigit :: Parser Char
-pdigit = reduce (<|>) $ pchar <$> ['0'..'9']
+pdigit = anyOf $ pchar <$> ['0'..'9']
+
+pstring :: String -> Parser String
+pstring = sequenceA . fmap pchar
 
 reduce :: (Parser a -> Parser a -> Parser a) -> [Parser a] -> Parser a
 reduce _ []     = fail "cannot reduce on empty list"

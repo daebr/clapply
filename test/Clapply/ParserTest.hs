@@ -14,8 +14,10 @@ suite = TestLabel "Paresr" (TestList
     , pendTest 
     , pcharTest
     , pdigitTest
+    , pstringTest
     , andThenTest
     , orElseTest
+    , anyOfTest
     , mapErrorTest
     , manyTest
     , many1Test
@@ -57,11 +59,23 @@ pdigitTest = TestLabel "pdigit" (TestList
     , TestCase $ assertBool "non-digit" (isLeft $ parse pdigit "a")
     ])
 
+pstringTest = TestLabel "pstring" (TestList
+    [ TestCase $ assertEqual "match" ("abc","def") (unsafeRun (pstring "abc") "abcdef")
+    , TestCase $ assertBool "mismatch" (isLeft $ parse (pstring "abc") "def")
+    , TestCase $ assertBool "partial match" (isLeft $ parse (pstring "abc") "ab")
+    ])
+
 orElseTest = TestLabel "orElse" (TestList
     [ TestCase $ assertEqual "Right <||> Right" ("a","aa") (unsafeRun (pure <$> pchar 'a' <||> many (pchar 'a')) "aaa")
     , TestCase $ assertEqual "Right <||> Left" ('a',"") (unsafeRun (pchar 'a' <||> pchar 'b') "a")
     , TestCase $ assertEqual "Left <||> Right" ('b',"") (unsafeRun (pchar 'a' <||> pchar 'b') "b")
     , TestCase $ assertBool "Left <||> Left" (isLeft $ parse (pchar 'a' <||> pchar 'b') "c")
+    ])
+
+anyOfTest = TestLabel "anyOf" (TestList
+    [ TestCase $ assertEqual "[Right,Right]" ("a","aa") (unsafeRun (anyOf [pure <$> pchar 'a', many (pchar 'a')]) "aaa")
+    , TestCase $ assertBool "[Left, Left]" (isLeft $ parse (anyOf [pchar 'a', pchar 'b']) "c")
+    , TestCase $ assertEqual "[Left, Right]" ('b',"") (unsafeRun (anyOf [pchar 'a', pchar 'b']) "b")
     ])
 
 andThenTest = TestLabel "andThen" (TestList
