@@ -1,7 +1,8 @@
 {-# LANGUAGE LambdaCase, TypeSynonymInstances #-}
 
 module Clapply.Parser 
-    ( Parser
+    ( module Control.Applicative
+    , Parser
     , ParseResult
     , Error
     , parse

@@ -1,4 +1,7 @@
-module Clapply.ArgumentParser where
+module Clapply.ArgumentParser
+    ( module Clapply.Parser
+    , module Clapply.ArgumentParser
+    ) where
 
 import Data.Bool (bool)
 import Data.Bifunctor (first)
