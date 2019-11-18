@@ -1,21 +1,27 @@
 module Clapply.ArgumentParserTest where
 
 import Clapply.ArgumentParser
+import Clapply.TestUtil
 import Test.HUnit
 
 suite = TestLabel "ArgumentParser" (TestList
     [ unitTest
     , integrationTest
+    , switchTest
     ])
 
 unitTest = TestLabel "unit" (TestList
-    [ flagTest
+    [ pallTest
     ])
 
-flagTest = TestLabel "flag" (TestList
-    [ -- TestCase $ assertEqual "short" True (unsafeParse (pflag "f" "flag") ["-f"]) 
-    -- ,-TestCase $ assertEqual "long" True (unsafeParse (pflag "f" "flag") ["--flag"])
-    -- , TestCase $ assertEqual "none" False (unsafeParse (pflag "f", "flag") [])
+pallTest = TestLabel "pall" (TestList
+    [ TestCase $ assertEqual "success" ("my-value", []) (unsafeRun pall ["my-value"])
+    ])
+
+switchTest = TestLabel "flag" (TestList
+    [ TestCase $ assertEqual "short" (Just ()) (unsafeParse (switch ["-s","--switch"]) ["-s"]) 
+    , TestCase $ assertEqual "long" (Just ()) (unsafeParse (switch ["-s","--switch"]) ["--switch"])
+    , TestCase $ assertEqual "none" Nothing (unsafeParse (switch ["-s","--switch"]) [])
     ])
 
 integrationTest = TestLabel "integration" (TestList
