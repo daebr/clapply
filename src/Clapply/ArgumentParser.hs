@@ -21,17 +21,17 @@ liftS p = liftP state
         Left err -> Left err
         Right a  -> Right (a,xs) 
 
-pall :: ArgumentParser String
-pall = liftP state
-  where
-    state []     = Left "no input"
-    state (x:xs) = pure (x,xs)
-
 popt :: ArgumentParser (Maybe String)
 popt = liftP state
   where
     state []     = pure (Nothing, [])
     state (x:xs) = pure (Just x, xs)
+
+text :: ArgumentParser String
+text = liftP state
+  where
+    state []     = Left "no input"
+    state (x:xs) = pure (x,xs)
 
 switch :: [String] -> ArgumentParser (Maybe ())
 switch cmds = f <$> popt

@@ -1,5 +1,6 @@
 module Clapply.ArgumentParserTest where
 
+import Data.Either (isLeft)
 import Clapply.ArgumentParser
 import Clapply.TestUtil
 import Test.HUnit
@@ -7,15 +8,16 @@ import Test.HUnit
 suite = TestLabel "ArgumentParser" (TestList
     [ unitTest
     , integrationTest
-    , switchTest
     ])
 
 unitTest = TestLabel "unit" (TestList
-    [ pallTest
+    [ textTest
+    , switchTest
     ])
 
-pallTest = TestLabel "pall" (TestList
-    [ TestCase $ assertEqual "success" ("my-value", []) (unsafeRun pall ["my-value"])
+textTest = TestLabel "text" (TestList
+    [ TestCase $ assertBool "empty" (isLeft $ parse text [])
+    , TestCase $ assertEqual "non-empty" "abc" (unsafeParse text ["abc"])
     ])
 
 switchTest = TestLabel "flag" (TestList
