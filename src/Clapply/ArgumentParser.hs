@@ -4,6 +4,7 @@ module Clapply.ArgumentParser
     ) where
 
 import Data.Bool (bool)
+import Data.Functor (void)
 import Data.Bifunctor (first)
 
 import Clapply.Prelude
@@ -21,11 +22,20 @@ liftS p = liftP state
         Left err -> Left err
         Right a  -> Right (a,xs) 
 
-popt :: ArgumentParser (Maybe String)
-popt = liftP state
+satisfy :: (String -> Bool) -> ArgumentParser String
+satisfy f = liftP state
   where
-    state []     = pure (Nothing, [])
-    state (x:xs) = pure (Just x, xs)
+    state [] = Left "no input"
+    state (x:xs) = bool (Left "satisfy failed") (pure (x,xs)) (f x)
+
+optional :: ArgumentParser a -> ArgumentParser (Maybe a)
+optional p = liftP state
+  where
+    state [] = pure (Nothing, [])
+    state xs = run (Just <$> p) xs
+
+elementOf :: [String] -> ArgumentParser String
+elementOf = satisfy . flip elem
 
 text :: ArgumentParser String
 text = liftP state
@@ -34,6 +44,7 @@ text = liftP state
     state (x:xs) = pure (x,xs)
 
 switch :: [String] -> ArgumentParser (Maybe ())
-switch cmds = f <$> popt
-  where
-    f opt = opt >>= bool Nothing (Just ()) . flip elem cmds
+switch = optional . void . elementOf
+
+option :: [String] -> ArgumentParser String
+option cmds = elementOf cmds &&. text
