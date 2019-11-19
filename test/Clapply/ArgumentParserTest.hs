@@ -1,6 +1,7 @@
 module Clapply.ArgumentParserTest where
 
 import Data.Either (isLeft)
+import Clapply.Prelude
 import Clapply.ArgumentParser
 import Clapply.TestUtil
 import Test.HUnit
@@ -34,5 +35,20 @@ optionTest = TestLabel "option" (TestList
     ])
 
 integrationTest = TestLabel "integration" (TestList
-    [
+    [ simpleOrderedTest
+    ])
+
+data SimpleOrdered = SimpleOrdered {
+    target :: String,
+    hasFlag :: Bool,
+    info :: Maybe String
+} deriving (Eq, Show)
+
+flagParser = foldr (const2 True) False <$> switch ["-f","--flag"]
+infoParser = optional $ option ["-i","--info"]
+simpleOrderedParser = SimpleOrdered <$> text <*> flagParser <*> infoParser
+
+simpleOrderedTest = TestLabel "simple ordered" (TestList
+    [ TestCase $ assertEqual "target only" (SimpleOrdered "target" False Nothing) (unsafeParse simpleOrderedParser ["target"])
+    , TestCase $ assertEqual "all fields" (SimpleOrdered "target" True (Just "info")) (unsafeParse simpleOrderedParser ["target","--flag","--info","info"])
     ])
